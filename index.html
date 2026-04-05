@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>消防員超勤計算</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&family=JetBrains+Mono:wght@400;700&display=swap');
+  :root {
+    --fire:#FF4B1F; --ember:#FF9068; --smoke:#1a1a2e; --ash:#2d2d44;
+    --steel:#3a3a5c; --cream:#FFF8F5; --gold:#FFD166; --green:#06D6A0;
+    --red:#EF476F; --text:#f0ece8; --muted:#a09898;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{background:var(--smoke);color:var(--text);font-family:'Noto Sans TC',sans-serif;min-height:100vh;padding:16px;
+    background-image:radial-gradient(ellipse at 10% 0%,rgba(255,75,31,.12) 0%,transparent 50%),radial-gradient(ellipse at 90% 100%,rgba(255,144,104,.08) 0%,transparent 50%);}
+  h1{font-size:1.4rem;font-weight:900;letter-spacing:.08em;color:var(--cream);display:flex;align-items:center;gap:8px;margin-bottom:4px;}
+  .subtitle{font-size:.72rem;color:var(--muted);letter-spacing:.1em;margin-bottom:20px;}
+  .section{background:var(--ash);border-radius:16px;padding:16px;margin-bottom:14px;border:1px solid rgba(255,255,255,.05);}
+  .section-title{font-size:.7rem;font-weight:700;letter-spacing:.15em;color:var(--muted);margin-bottom:14px;display:flex;align-items:center;gap:6px;}
+  .dot{width:6px;height:6px;border-radius:50%;background:var(--fire);display:inline-block;}
+  .dot-gold{width:6px;height:6px;border-radius:50%;background:var(--gold);display:inline-block;}
+  .form-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+  .form-row:last-child{margin-bottom:0;}
+  .form-label{font-size:.78rem;color:var(--text);flex:1;}
+  .form-controls{display:flex;align-items:center;gap:8px;}
+  select{background:var(--steel);border:1px solid rgba(255,255,255,.1);border-radius:8px;color:var(--cream);font-family:'Noto Sans TC',sans-serif;font-size:.85rem;padding:7px 10px;-webkit-appearance:none;cursor:pointer;}
+  select:focus{outline:none;border-color:var(--fire);}
+  .shift-btn{background:var(--steel);border:1px solid rgba(255,255,255,.08);border-radius:8px;color:var(--muted);font-family:'Noto Sans TC',sans-serif;font-size:.85rem;font-weight:700;padding:8px 22px;cursor:pointer;transition:all .2s;}
+  .shift-btn.active{background:linear-gradient(135deg,var(--fire),var(--ember));border-color:var(--fire);color:white;}
+  .stepper{display:flex;align-items:center;background:var(--steel);border-radius:8px;border:1px solid rgba(255,255,255,.1);overflow:hidden;}
+  .stepper button{background:none;border:none;color:var(--muted);width:32px;height:36px;cursor:pointer;font-size:1.1rem;display:flex;align-items:center;justify-content:center;transition:color .15s,background .15s;flex-shrink:0;}
+  .stepper button:hover{color:var(--fire);background:rgba(255,75,31,.1);}
+  .stepper input{width:52px;background:none;border:none;border-left:1px solid rgba(255,255,255,.08);border-right:1px solid rgba(255,255,255,.08);color:var(--cream);font-family:'JetBrains Mono',monospace;font-size:.9rem;padding:7px 4px;text-align:center;-webkit-appearance:none;}
+  .stepper input:focus{outline:none;}
+  .unit-label{font-size:.7rem;color:var(--muted);}
+  .result-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;}
+  .result-card{background:var(--ash);border-radius:12px;padding:14px;border:1px solid rgba(255,255,255,.06);position:relative;overflow:hidden;}
+  .result-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--fire),var(--ember));opacity:0;}
+  .result-card.hl::before{opacity:1;}
+  .result-card .label{font-size:.65rem;color:var(--muted);margin-bottom:6px;}
+  .result-card .value{font-family:'JetBrains Mono',monospace;font-size:1.5rem;font-weight:700;color:var(--cream);line-height:1;}
+  .result-card .value .unit{font-size:.7rem;color:var(--muted);margin-left:3px;}
+  .result-card.hl .value{color:var(--gold);}
+  .result-card.gn .value{color:var(--green);}
+  .progress-section{background:var(--ash);border-radius:12px;padding:14px;margin-bottom:14px;border:1px solid rgba(255,255,255,.06);}
+  .progress-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;}
+  .progress-header .label{font-size:.72rem;color:var(--muted);}
+  .progress-header .pct{font-family:'JetBrains Mono',monospace;font-size:.85rem;color:var(--gold);font-weight:700;}
+  .progress-bar{background:rgba(255,255,255,.08);border-radius:99px;height:8px;overflow:hidden;}
+  .progress-fill{height:100%;border-radius:99px;background:linear-gradient(90deg,var(--fire),var(--gold));transition:width .4s ease;}
+  .pay-card{background:linear-gradient(135deg,rgba(255,75,31,.15),rgba(255,144,104,.08));border:1px solid rgba(255,75,31,.3);border-radius:16px;padding:18px;margin-bottom:14px;text-align:center;position:relative;overflow:hidden;}
+  .pay-card::after{content:'🔥';position:absolute;right:16px;top:50%;transform:translateY(-50%);font-size:2rem;opacity:.3;}
+  .pay-card .label{font-size:.72rem;color:var(--ember);letter-spacing:.12em;margin-bottom:6px;}
+  .pay-card .amount{font-family:'JetBrains Mono',monospace;font-size:2.4rem;font-weight:700;color:var(--gold);}
+  .pay-card .note{font-size:.65rem;color:var(--muted);margin-top:4px;}
+  .breakdown{background:var(--ash);border-radius:16px;padding:16px;margin-bottom:14px;border:1px solid rgba(255,255,255,.05);}
+  .breakdown-title{font-size:.7rem;font-weight:700;letter-spacing:.15em;color:var(--muted);margin-bottom:14px;display:flex;align-items:center;gap:6px;}
+  .bd-row{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid rgba(255,255,255,.05);font-size:.78rem;}
+  .bd-row:last-child{border-bottom:none;}
+  .bd-label{color:var(--muted);}
+  .bd-val{font-family:'JetBrains Mono',monospace;font-size:.85rem;color:var(--cream);font-weight:500;}
+  .bd-val.minus{color:var(--red);}
+  .bd-val.total{color:var(--gold);font-size:1rem;font-weight:700;}
+  .bd-val.higreen{color:var(--green);font-weight:700;}
+  .bd-divider{border:none;border-top:1px solid rgba(255,255,255,.12);margin:8px 0 4px;}
+  footer{text-align:center;font-size:.62rem;color:rgba(160,152,152,.4);margin-top:24px;letter-spacing:.08em;}
+</style>
+</head>
+<body>
+
+<h1>🚒 大同分隊超勤計算</h1>
+<div class="subtitle">臺北市政府消防局第四救災救護大隊大同分隊</div>
+
+<div class="section">
+  <div class="section-title"><span class="dot"></span>基本設定</div>
+
+  <div class="form-row">
+    <span class="form-label">月份</span>
+    <div class="form-controls">
+      <select id="year" onchange="calc()">
+        <option value="113">113年</option>
+        <option value="114">114年</option>
+        <option value="115" selected>115年</option>
+        <option value="116">116年</option>
+      </select>
+      <select id="month" onchange="calc()">
+        <option value="1">1月</option><option value="2">2月</option>
+        <option value="3">3月</option><option value="4" selected>4月</option>
+        <option value="5">5月</option><option value="6">6月</option>
+        <option value="7">7月</option><option value="8">8月</option>
+        <option value="9">9月</option><option value="10">10月</option>
+        <option value="11">11月</option><option value="12">12月</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="form-row">
+    <span class="form-label">班別</span>
+    <div class="form-controls">
+      <button class="shift-btn active" id="btn-jia" onclick="setShift('jia')">甲班</button>
+      <button class="shift-btn" id="btn-yi" onclick="setShift('yi')">乙班</button>
+    </div>
+  </div>
+
+  <div class="form-row">
+    <span class="form-label">每日休息時數</span>
+    <div class="form-controls">
+      <div class="stepper">
+        <button onclick="adj('restHours',-1)">−</button>
+        <input type="number" id="restHours" value="3" min="0" max="23" oninput="calc()">
+        <button onclick="adj('restHours',1)">＋</button>
+      </div>
+      <span class="unit-label">hr</span>
+    </div>
+  </div>
+
+  <div class="form-row">
+    <span class="form-label">時薪（元）</span>
+    <div class="stepper">
+      <button onclick="adj('hourlyRate',-1)">−</button>
+      <input type="number" id="hourlyRate" value="328" oninput="calc()">
+      <button onclick="adj('hourlyRate',1)">＋</button>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-title"><span class="dot"></span>假別天數（扣值班天，不計服勤）</div>
+
+  <div class="form-row">
+    <span class="form-label">請假（年假／婚喪等）<br><span style="font-size:.65rem;color:var(--muted);">月請假時數 +8hr／天</span></span>
+    <div class="form-controls">
+      <div class="stepper">
+        <button onclick="adj('annualLeave',-1)">−</button>
+        <input type="number" id="annualLeave" value="0" min="0" oninput="calc()">
+        <button onclick="adj('annualLeave',1)">＋</button>
+      </div>
+      <span class="unit-label">天</span>
+    </div>
+  </div>
+
+  <div class="form-row">
+    <span class="form-label">補休<br><span style="font-size:.65rem;color:var(--muted);">月請假時數 +12hr／天</span></span>
+    <div class="form-controls">
+      <div class="stepper">
+        <button onclick="adj('compLeave',-1)">−</button>
+        <input type="number" id="compLeave" value="0" min="0" oninput="calc()">
+        <button onclick="adj('compLeave',1)">＋</button>
+      </div>
+      <span class="unit-label">天</span>
+    </div>
+  </div>
+
+  <div class="form-row">
+    <span class="form-label">加休（外勤加休）<br><span style="font-size:.65rem;color:var(--muted);">月請假時數 +0hr／天</span></span>
+    <div class="form-controls">
+      <div class="stepper">
+        <button onclick="adj('extraLeave',-1)">−</button>
+        <input type="number" id="extraLeave" value="0" min="0" oninput="calc()">
+        <button onclick="adj('extraLeave',1)">＋</button>
+      </div>
+      <span class="unit-label">天</span>
+    </div>
+  </div>
+
+  <div class="form-row">
+    <span class="form-label">外宿天數<br><span style="font-size:.65rem;color:var(--muted);">當日服勤固定 12hr</span></span>
+    <div class="form-controls">
+      <div class="stepper">
+        <button onclick="adj('overnightDays',-1)">−</button>
+        <input type="number" id="overnightDays" value="0" min="0" oninput="calc()">
+        <button onclick="adj('overnightDays',1)">＋</button>
+      </div>
+      <span class="unit-label">天</span>
+    </div>
+  </div>
+
+  <div class="form-row">
+    <span class="form-label">其他增減時數</span>
+    <div class="form-controls">
+      <div class="stepper">
+        <button onclick="adj('otherHours',-1)">−</button>
+        <input type="number" id="otherHours" value="0" oninput="calc()">
+        <button onclick="adj('otherHours',1)">＋</button>
+      </div>
+      <span class="unit-label">hr</span>
+    </div>
+  </div>
+</div>
+
+<div class="result-grid">
+  <div class="result-card">
+    <div class="label">本班值班天數</div>
+    <div class="value" id="r_shiftDays">—<span class="unit">天</span></div>
+  </div>
+  <div class="result-card hl">
+    <div class="label">實際服勤時數</div>
+    <div class="value" id="r_actualService">—<span class="unit">hr</span></div>
+  </div>
+  <div class="result-card">
+    <div class="label">當月工作日</div>
+    <div class="value" id="r_civilDays">—<span class="unit">天</span></div>
+  </div>
+  <div class="result-card">
+    <div class="label">當月應服勤時數</div>
+    <div class="value" id="r_legalService">—<span class="unit">hr</span></div>
+  </div>
+  <div class="result-card gn">
+    <div class="label">實際超勤</div>
+    <div class="value" id="r_actualOT">—<span class="unit">hr</span></div>
+  </div>
+  <div class="result-card hl">
+    <div class="label">待領超勤時數</div>
+    <div class="value" id="r_paidOT">—<span class="unit">hr</span></div>
+  </div>
+  <div class="result-card" style="grid-column:span 2;">
+    <div class="label">待領超勤時數（實際超勤 − 支領超勤）</div>
+    <div class="value" id="r_remainOT" style="color:var(--ember);">—<span class="unit">hr</span></div>
+  </div>
+</div>
+
+<div class="progress-section">
+  <div class="progress-header">
+    <span class="label">支領進度（支領 ÷ 上限）</span>
+    <span class="pct" id="r_pct">0%</span>
+  </div>
+  <div class="progress-bar">
+    <div class="progress-fill" id="r_bar" style="width:0%"></div>
+  </div>
+</div>
+
+<div class="pay-card">
+  <div class="label">可領超勤金額</div>
+  <div class="amount" id="r_pay">$0</div>
+  <div class="note" id="r_payNote">請輸入資料</div>
+</div>
+
+<div class="breakdown">
+  <div class="breakdown-title"><span class="dot-gold"></span>計算拆解</div>
+
+  <div class="bd-row">
+    <span class="bd-label">本班值班天數</span>
+    <span class="bd-val" id="bd_shiftDays">—</span>
+  </div>
+  <div class="bd-row">
+    <span class="bd-label">扣：請假天數（×8hr）</span>
+    <span class="bd-val minus" id="bd_annual">—</span>
+  </div>
+  <div class="bd-row">
+    <span class="bd-label">扣：補休天數（×12hr）</span>
+    <span class="bd-val minus" id="bd_comp">—</span>
+  </div>
+  <div class="bd-row">
+    <span class="bd-label">扣：加休天數（×0hr）</span>
+    <span class="bd-val minus" id="bd_extra">—</span>
+  </div>
+  <div class="bd-row">
+    <span class="bd-label">正常出勤天（<span id="bd_normalDays">—</span>天 × <span id="bd_daily">—</span>hr）</span>
+    <span class="bd-val" id="bd_workCalc">—</span>
+  </div>
+  <div class="bd-row">
+    <span class="bd-label">外宿天（固定 12hr／天）</span>
+    <span class="bd-val" id="bd_overnight">—</span>
+  </div>
+  <div class="bd-row">
+    <span class="bd-label">其他增減</span>
+    <span class="bd-val" id="bd_other">—</span>
+  </div>
+  <div class="bd-row">
+    <span class="bd-label" style="color:var(--gold);font-weight:700;">實際服勤時數</span>
+    <span class="bd-val total" id="bd_actual">—</span>
+  </div>
+
+  <hr class="bd-divider">
+
+  <div class="bd-row">
+    <span class="bd-label">當月工作日（<span id="bd_cdays">—</span>天 × 8hr）</span>
+    <span class="bd-val" id="bd_civil">—</span>
+  </div>
+  <div class="bd-row">
+    <span class="bd-label">減：請假（<span id="bd_adays">—</span>天 × 8hr）</span>
+    <span class="bd-val minus" id="bd_leaveA">—</span>
+  </div>
+  <div class="bd-row">
+    <span class="bd-label">減：補休（<span id="bd_cdays2">—</span>天 × 12hr）</span>
+    <span class="bd-val minus" id="bd_leaveC">—</span>
+  </div>
+  <div class="bd-row">
+    <span class="bd-label" style="color:var(--text);font-weight:700;">當月應服勤時數</span>
+    <span class="bd-val" style="color:var(--text);" id="bd_legal">—</span>
+  </div>
+
+  <hr class="bd-divider">
+
+  <div class="bd-row">
+    <span class="bd-label" style="color:var(--green);font-weight:700;">實際超勤（實際 − 當月應服勤時數）</span>
+    <span class="bd-val higreen" id="bd_aot">—</span>
+  </div>
+  <div class="bd-row">
+    <span class="bd-label">支領上限 ⌈19000 ÷ 時薪⌉</span>
+    <span class="bd-val" id="bd_cap">—</span>
+  </div>
+  <div class="bd-row">
+    <span class="bd-label" style="color:var(--gold);font-weight:700;">待領超勤時數</span>
+    <span class="bd-val total" id="bd_paid">—</span>
+  </div>
+</div>
+
+<footer>僅供參考，實際以人事單位計算為準</footer>
+
+<script>
+var currentShift = 'jia';
+
+function setShift(s) {
+  currentShift = s;
+  document.getElementById('btn-jia').className = 'shift-btn' + (s==='jia'?' active':'');
+  document.getElementById('btn-yi').className  = 'shift-btn' + (s==='yi' ?' active':'');
+  calc();
+}
+
+function adj(id, delta) {
+  var el = document.getElementById(id);
+  var val = parseFloat(el.value) || 0;
+  el.value = Math.max(0, val + delta);
+  calc();
+}
+
+function getVal(id) {
+  return parseFloat(document.getElementById(id).value) || 0;
+}
+
+function setText(id, v) { document.getElementById(id).textContent = v; }
+function setHTML(id, v) { document.getElementById(id).innerHTML  = v; }
+
+function getWorkdays(rocYear, month) {
+  var adYear = rocYear + 1911;
+  // 各年度國定假日（工作日，含補假；週六日不列，已自動排除）
+  // 依行政院人事行政總處辦公日曆表
+  var HOLIDAYS = {
+    2024: [ // 113年
+      '1/1',
+      '2/8','2/9','2/12','2/13','2/14',  // 春節工作日放假
+      '2/28',
+      '4/4','4/5',    // 兒童節/清明
+      '6/10',         // 端午
+      '9/17',         // 中秋
+      '10/10',
+    ],
+    2025: [ // 114年
+      '1/1',
+      '1/27','1/28','1/29','1/30','1/31',  // 春節
+      '2/28',
+      '4/3','4/4',    // 兒童節/清明
+      '5/30',         // 端午
+      '9/29',         // 教師節補假
+      '10/6',         // 中秋
+      '10/24',        // 光復節補假
+      '10/10',
+    ],
+    2026: [ // 115年（依人事行政總處公告）
+      '1/1',
+      '2/16','2/17','2/18','2/19','2/20',  // 春節工作日放假
+      '2/27',         // 和平紀念日補假（2/28週六→2/27補）
+      '4/3',          // 兒童節補假（4/4週六）
+      '4/6',          // 清明節補假（4/5週日）
+      '5/1',          // 勞動節
+      '5/29',         // 端午節
+      '9/25',         // 中秋節
+      '9/29',         // 教師節補假（9/28週日）
+      '10/9',         // 國慶日補假（10/10週六）
+      '10/26',        // 光復節補假（10/25週日）
+      '12/25',        // 行憲紀念日
+    ],
+    2027: [ // 116年（估算）
+      '1/1',
+      '2/15','2/16','2/17','2/18','2/19',  // 春節
+      '2/28',
+      '4/4','4/5',
+      '6/18',
+      '10/1',
+      '10/10',
+    ],
+  };
+  var holidays = HOLIDAYS[adYear] || ['1/1','2/28','4/4','10/10'];
+  var dim = new Date(adYear, month, 0).getDate();
+  var w = 0;
+  for (var d = 1; d <= dim; d++) {
+    var dow = new Date(adYear, month-1, d).getDay();
+    if (dow===0 || dow===6) continue;
+    if (holidays.indexOf(month+'/'+d) >= 0) continue;
+    w++;
+  }
+  return w;
+}
+
+function calc() {
+  var year        = getVal('year');
+  var month       = getVal('month');
+  var hourlyRate  = getVal('hourlyRate');
+  var restHours   = getVal('restHours');
+  var annualLeave = getVal('annualLeave');  // 請假天數
+  var compLeave   = getVal('compLeave');   // 補休天數
+  var extraLeave  = getVal('extraLeave');  // 加休天數
+  var otherHours      = getVal('otherHours');
+  var overnightDays   = getVal('overnightDays');  // 外宿天數，每天扣12hr
+
+  var adYear = year + 1911;
+  var dim = new Date(adYear, month, 0).getDate();
+
+  // 1. 本班值班天數
+  var shiftDays = 0;
+  for (var d = 1; d <= dim; d++) {
+    if (currentShift==='jia' && d%2===1) shiftDays++;
+    if (currentShift==='yi'  && d%2===0) shiftDays++;
+  }
+
+  // 2. 實際出勤天數（扣掉所有假別）
+  var leaveDays   = annualLeave + compLeave + extraLeave;
+  var workDays    = Math.max(0, shiftDays - leaveDays);
+  var dailyWork   = 24 - restHours;
+  // 外宿那天服勤固定12hr（不套用每日服勤時數）
+  var normalDays    = workDays - overnightDays;
+  var actualService = normalDays * dailyWork + overnightDays * 12 + otherHours;
+
+  // 3. 月請假時數 = 請假×8 + 補休×12 + 加休×0
+  var leaveHours  = annualLeave * 8 + compLeave * 12;
+
+  // 4. 當月應服勤時數 = 當月工作日×8 − 月請假時數
+  var civilDays   = getWorkdays(year, month);
+  var civilHours  = civilDays * 8;
+  var legalService = civilHours - leaveHours;
+
+  // 5. 超勤 & 支領
+  var actualOT  = Math.max(0, actualService - legalService);
+  var maxHours  = Math.ceil(19000 / hourlyRate);
+  var paidOT    = Math.min(actualOT, maxHours);
+  var pay       = Math.min(paidOT * hourlyRate, 19000);
+  var pct       = maxHours > 0 ? Math.min(100, Math.round(paidOT/maxHours*100)) : 0;
+
+  // 結果卡片
+  setHTML('r_shiftDays',    shiftDays    + '<span class="unit">天</span>');
+  setHTML('r_actualService',actualService+ '<span class="unit">hr</span>');
+  setHTML('r_civilDays',    civilDays    + '<span class="unit">天</span>');
+  setHTML('r_legalService', legalService + '<span class="unit">hr</span>');
+  setHTML('r_actualOT',     actualOT     + '<span class="unit">hr</span>');
+  setHTML('r_paidOT',       paidOT       + '<span class="unit">hr</span>');
+  setText('r_pct', pct + '%');
+  document.getElementById('r_bar').style.width = pct + '%';
+  setText('r_pay', '$' + pay.toLocaleString());
+  var remainOT = actualOT - paidOT;
+  setHTML('r_remainOT', remainOT + '<span class="unit">hr</span>');
+  setText('r_payNote', paidOT >= maxHours
+    ? '支領上限 ' + maxHours + ' hr，全額核發'
+    : '實際超勤 ' + actualOT + ' hr，支領 ' + paidOT + ' hr × $' + hourlyRate);
+
+  // 拆解
+  setText('bd_shiftDays', shiftDays + ' 天');
+  setText('bd_annual',    annualLeave > 0 ? '−' + annualLeave + ' 天' : '0');
+  setText('bd_comp',      compLeave   > 0 ? '−' + compLeave   + ' 天' : '0');
+  setText('bd_extra',     extraLeave  > 0 ? '−' + extraLeave  + ' 天' : '0');
+  setText('bd_normalDays', normalDays);
+  setText('bd_daily',     dailyWork);
+  setText('bd_workCalc',  normalDays + ' × ' + dailyWork + ' = ' + (normalDays*dailyWork) + ' hr');
+  setText('bd_overnight', overnightDays > 0 ? overnightDays + ' × 12 = ' + (overnightDays*12) + ' hr' : '0');
+  setText('bd_other',     (otherHours>=0?'+':'') + otherHours + ' hr');
+  setText('bd_actual',    actualService + ' hr');
+  setText('bd_cdays',     civilDays);
+  setText('bd_civil',     civilDays + ' × 8 = ' + civilHours + ' hr');
+  setText('bd_adays',     annualLeave);
+  setText('bd_leaveA',    annualLeave > 0 ? '−' + (annualLeave*8)  + ' hr' : '0');
+  setText('bd_cdays2',    compLeave);
+  setText('bd_leaveC',    compLeave   > 0 ? '−' + (compLeave*12)   + ' hr' : '0');
+  setText('bd_legal',     legalService + ' hr');
+  setText('bd_aot',       actualOT + ' hr');
+  setText('bd_cap',       '⌈19000÷' + hourlyRate + '⌉ = ' + maxHours + ' hr');
+  var remainOT = actualOT - paidOT;
+  setText('bd_paid', remainOT + ' hr');
+}
+
+calc();
+</script>
+</body>
+</html>
