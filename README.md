@@ -5,4 +5,4 @@ Beta version released
 
 
 V1.0.1 
-Adjustment based on working hours
+Adjustment based on work hours
