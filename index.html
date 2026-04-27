@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>大同分隊超勤計算 v1.0.1</title>
+<title>大同分隊超勤計算 v1.0.2</title>
 <style>
 /* 使用系統內建字型，無需網路載入 */
 
@@ -412,7 +412,7 @@ footer {
   <div class="unit-tag">臺北市消防局 · 第四大隊 · 大同分隊</div>
   <h1>🚒 超勤計算系統</h1>
   <div class="version-row">
-    <span class="version">v1.0.1</span>
+    <span class="version">v1.0.2</span>
     <span class="ver-date">115年 · 僅供參考</span>
   </div>
 </div>
@@ -666,7 +666,7 @@ footer {
   </div>
 </div>
 
-<footer>// 大同分隊超勤計算系統 v1.0.1 · 僅供參考，實際以人事單位計算為準</footer>
+<footer>// 大同分隊超勤計算系統 v1.0.2 · 僅供參考，實際以人事單位計算為準</footer>
 
 <script>
 var currentShift = 'jia';
@@ -726,10 +726,17 @@ function calc() {
   var adYear = year + 1911;
   var dim = new Date(adYear, month, 0).getDate();
 
+  // 基準：115年1月1日（2026/1/1）= 乙班上（delta=0為乙班）
+  var base = new Date(2026, 0, 1);
+  var target = new Date(adYear, month-1, 1);
+  var baseDelta = Math.round((target - base) / (1000*60*60*24));
   var shiftDays = 0;
   for (var d = 1; d <= dim; d++) {
-    if (currentShift==='jia' && d%2===1) shiftDays++;
-    if (currentShift==='yi'  && d%2===0) shiftDays++;
+    var delta = baseDelta + (d - 1);
+    var isYi  = (delta % 2 === 0);  // 偶數delta = 乙班
+    var isJia = !isYi;               // 奇數delta = 甲班
+    if (currentShift==='jia' && isJia) shiftDays++;
+    if (currentShift==='yi'  && isYi)  shiftDays++;
   }
 
   var leaveDays = annualLeave + compLeave + extraLeave;
